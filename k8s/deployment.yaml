@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worldcat-mcp
+spec:
+  # The server is stateless (no MCP session state is kept in memory), so it
+  # scales horizontally without sticky sessions.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: worldcat-mcp
+  template:
+    metadata:
+      labels:
+        app: worldcat-mcp
+    spec:
+      imagePullSecrets:
+        - name: worldcat-mcp-regcred
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: worldcat-mcp
+          image: IMAGE_SET_FROM_ENV_BY_KUSTOMIZE
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: worldcat-mcp-config
+            - secretRef:
+                name: worldcat-mcp-secret
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

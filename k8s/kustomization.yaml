@@ -1,0 +1,63 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Everything site-specific lives in .env. Run scripts/gen-k8s-config.sh to
+# (re)generate the files under k8s/generated/ before `kubectl apply -k k8s/`.
+namespace: vtlib
+
+labels:
+  - pairs:
+      app.kubernetes.io/name: worldcat-mcp
+      app.kubernetes.io/part-of: vtlibai
+    includeSelectors: true
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+configMapGenerator:
+  # Non-sensitive runtime settings, injected into the container via envFrom
+  - name: worldcat-mcp-config
+    envs:
+      - generated/config.env
+  # Deployment parameters (hostname, image); consumed by `replacements` below,
+  # not by the container
+  - name: worldcat-mcp-deploy
+    envs:
+      - generated/deploy.env
+    options:
+      disableNameSuffixHash: true
+      annotations:
+        config.kubernetes.io/local-config: "true"
+
+secretGenerator:
+  - name: worldcat-mcp-secret
+    envs:
+      - generated/secret.env
+  - name: worldcat-mcp-regcred
+    type: kubernetes.io/dockerconfigjson
+    files:
+      - .dockerconfigjson=generated/dockerconfig.json
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: worldcat-mcp-deploy
+      fieldPath: data.MCP_URL
+    targets:
+      - select:
+          kind: Ingress
+          name: worldcat-mcp
+        fieldPaths:
+          - spec.rules.0.host
+  - source:
+      kind: ConfigMap
+      name: worldcat-mcp-deploy
+      fieldPath: data.MCP_IMAGE
+    targets:
+      - select:
+          kind: Deployment
+          name: worldcat-mcp
+        fieldPaths:
+          - spec.template.spec.containers.[name=worldcat-mcp].image

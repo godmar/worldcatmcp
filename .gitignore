@@ -1,0 +1,23 @@
+# Secrets / site-specific configuration -- .env is the single source of truth
+.env
+.env.*
+!.env.sample
+
+# Generated from .env by scripts/gen-k8s-config.sh
+k8s/generated/
+
+# Kubeconfig
+endeavour.yaml
+*.kubeconfig
+
+# Locally saved copies of vendor documentation
+wcv2.html
+wcv2_files/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/

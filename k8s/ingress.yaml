@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: worldcat-mcp
+  annotations:
+    # MCP responses can take a while (WorldCat round trips); allow long reads.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: nginx
+  rules:
+    # host is set from MCP_URL in .env via kustomize replacements
+    - host: HOST_SET_FROM_ENV_BY_KUSTOMIZE
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: worldcat-mcp
+                port:
+                  name: http
